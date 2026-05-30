@@ -166,7 +166,7 @@ vector/
 
 ## Related resources
 
-- ColdFusion 2025 AI documentation: https://helpx.adobe.com/coldfusion/using/coldfusion-ai-services.html
+- ColdFusion 2025 AI documentation: https://guides.adobe.com/coldfusion/en/docs/introduction-to-coldfusion/whats-new.html
 - Ollama model library: https://ollama.com/library
 - CFDocs (ColdFusion language reference): https://cfdocs.org
 - Qdrant documentation: https://qdrant.tech/documentation/
