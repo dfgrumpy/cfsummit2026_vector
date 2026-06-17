@@ -10,7 +10,9 @@
       YOUR_QDRANT_HOST   — IP or hostname of the machine running Qdrant
                            e.g. 192.168.1.100  or  qdrant.local  (can be the same machine)
 
-    Both services use their default ports (Ollama: 11434, Qdrant: 6334).
+    Port usage:
+      qdrantUrl     (6334) — gRPC port used by CF 2025's VectorStore() for ingest and search
+      qdrantRestUrl (6333) — HTTP REST port used by test_endpoint.cfm to verify the collection
 
     pdfDir must point to a directory inside your ColdFusion web root that contains PDF files
     to ingest.  The path shown is relative to a Docker-based CommandBox install; adjust as needed.
@@ -36,6 +38,7 @@
             "storeMode"        : "memory",
             "storeKey"         : "vectorStore_desktop_memory",
             "qdrantUrl"        : "",
+            "qdrantRestUrl"    : "",
             "qdrantCollection" : ""
         },
 
@@ -54,6 +57,7 @@
             "storeMode"        : "qdrant",
             "storeKey"         : "vectorStore_desktop_qdrant",
             "qdrantUrl"        : "http://YOUR_QDRANT_HOST:6334",
+            "qdrantRestUrl"    : "http://YOUR_QDRANT_HOST:6333",
             "qdrantCollection" : "cfai_desktop"
         },
 
@@ -72,6 +76,7 @@
             "storeMode"        : "memory",
             "storeKey"         : "vectorStore_nas_memory",
             "qdrantUrl"        : "",
+            "qdrantRestUrl"    : "",
             "qdrantCollection" : ""
         },
 
@@ -90,18 +95,21 @@
             "storeMode"        : "qdrant",
             "storeKey"         : "vectorStore_nas_qdrant",
             "qdrantUrl"        : "http://YOUR_QDRANT_HOST:6334",
+            "qdrantRestUrl"    : "http://YOUR_QDRANT_HOST:6333",
             "qdrantCollection" : "cfai_nas"
         }
 
     };
 
-    // ── Resolve active profile from URL or form, defaulting to desktop_memory ──
+    // ── Resolve active profile from URL, form, cookie, or default ─────────────
     DEFAULT_PROFILE = "desktop_memory";
 
     if ( structKeyExists( url, "profile" ) AND structKeyExists( profiles, url.profile ) ) {
         ACTIVE_PROFILE = url.profile;
     } else if ( structKeyExists( form, "profile" ) AND structKeyExists( profiles, form.profile ) ) {
         ACTIVE_PROFILE = form.profile;
+    } else if ( structKeyExists( cookie, "cfai_profile" ) AND structKeyExists( profiles, cookie.cfai_profile ) ) {
+        ACTIVE_PROFILE = cookie.cfai_profile;
     } else {
         ACTIVE_PROFILE = DEFAULT_PROFILE;
     }
@@ -124,6 +132,7 @@
     STORE_MODE         = cfg.storeMode;
     STORE_KEY          = cfg.storeKey;
     QDRANT_URL         = cfg.qdrantUrl;
+    QDRANT_REST_URL    = structKeyExists( cfg, "qdrantRestUrl" ) ? cfg.qdrantRestUrl : cfg.qdrantUrl;
     QDRANT_COLLECTION  = cfg.qdrantCollection;
 
     // ── Qdrant version compatibility ───────────────────────────────────────────

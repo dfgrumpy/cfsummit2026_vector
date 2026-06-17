@@ -63,36 +63,51 @@
         sourceFilter = ( isDefined( "form.sourceFilter" ) AND len( trim( form.sourceFilter ) ) )
                        ? trim( form.sourceFilter ) : "all";
 
-        // Fetch extra results when filtering so we have enough after the filter
-        fetchK = ( sourceFilter NEQ "all" ) ? topK * 3 : topK;
-
         // Step 1: Vector search
         try {
             startTick = getTickCount();
-            results   = application[ STORE_KEY ].search({
-                text     : queryText,
-                topK     : fetchK,
-                minScore : minScore
-            });
+
+            if ( sourceFilter EQ "all" ) {
+                // Split topK evenly across PDF and JSON so both types always appear.
+                // Fetch 3x per bucket to survive score filtering, then cap each at half topK.
+                halfK     = max( 1, int( topK / 2 ) );
+                fetchK    = halfK * 3;
+                rawAll    = application[ STORE_KEY ].search({ text: queryText, topK: fetchK * 2, minScore: minScore });
+
+                pdfBucket  = [];
+                jsonBucket = [];
+                for ( r in rawAll ) {
+                    rType = structKeyExists( r.metadata, "type" ) ? lCase( trim( r.metadata.type ) ) : "";
+                    if      ( rType EQ "pdf"  AND arrayLen( pdfBucket  ) LT halfK ) arrayAppend( pdfBucket,  r );
+                    else if ( rType EQ "json" AND arrayLen( jsonBucket ) LT halfK ) arrayAppend( jsonBucket, r );
+                    if ( arrayLen( pdfBucket ) GTE halfK AND arrayLen( jsonBucket ) GTE halfK ) break;
+                }
+                // Interleave: pdf[1], json[1], pdf[2], json[2]…
+                maxLen = max( arrayLen( pdfBucket ), arrayLen( jsonBucket ) );
+                for ( i = 1; i LTE maxLen; i++ ) {
+                    if ( i LTE arrayLen( pdfBucket  ) ) arrayAppend( filteredResults, pdfBucket[i]  );
+                    if ( i LTE arrayLen( jsonBucket ) ) arrayAppend( filteredResults, jsonBucket[i] );
+                }
+                results = filteredResults;
+            } else {
+                // Single-type filter: fetch extra to have enough after filtering
+                fetchK  = topK * 3;
+                results = application[ STORE_KEY ].search({ text: queryText, topK: fetchK, minScore: minScore });
+                for ( r in results ) {
+                    rType = structKeyExists( r.metadata, "type" ) ? lCase( trim( r.metadata.type ) ) : "";
+                    if ( rType EQ sourceFilter ) {
+                        arrayAppend( filteredResults, r );
+                        if ( arrayLen( filteredResults ) GTE topK ) break;
+                    }
+                }
+            }
+
             searchTime = getTickCount() - startTick;
         } catch ( any e ) {
             aiError = "Search error: " & e.message;
         }
 
-        // Step 2: Apply source type filter and trim to topK
-        if ( sourceFilter EQ "all" ) {
-            filteredResults = results;
-        } else {
-            for ( r in results ) {
-                rType = structKeyExists( r.metadata, "type" ) ? lCase( trim( r.metadata.type ) ) : "";
-                if ( rType EQ sourceFilter ) {
-                    arrayAppend( filteredResults, r );
-                    if ( arrayLen( filteredResults ) GTE topK ) break;
-                }
-            }
-        }
-
-        // Step 3: RAG — build context and call LLM
+        // Step 2: RAG — build context and call LLM
         if ( useRAG AND arrayLen( filteredResults ) GT 0 AND NOT len( aiError ) ) {
             try {
                 contextParts = [];
@@ -158,9 +173,56 @@
     <input type="hidden" name="useRAG"       id="useRAGField"       value="<cfoutput>#useRAG ? 1 : 0#</cfoutput>">
     <input type="hidden" name="sourceFilter" id="sourceFilterField" value="<cfoutput>#encodeForHTMLAttribute( sourceFilter )#</cfoutput>">
 
-    <p class="text-secondary small">
-        &#128161; Ask naturally — e.g. <em>"How do I configure a vector store?"</em>
-    </p>
+    <!--- Example queries --->
+    <div class="mb-3">
+        <div class="d-flex gap-2 mb-2">
+            <button class="btn btn-sm btn-outline-warning" type="button"
+                    onclick="togglePool('pool-pdf', this)">
+                &#128196; PDF docs
+            </button>
+            <button class="btn btn-sm btn-outline-info" type="button"
+                    onclick="togglePool('pool-json', this)">
+                &#128288; Language reference
+            </button>
+            <button class="btn btn-sm btn-outline-success" type="button"
+                    onclick="togglePool('pool-combined', this)">
+                &#127919; Both data sets
+            </button>
+        </div>
+
+        <div id="pool-pdf" class="d-none d-flex flex-wrap gap-2 mt-2">
+            <button type="button" class="btn btn-sm btn-outline-warning example-q">How do I configure multiple vector stores with different data domains and route queries to the right one?</button>
+            <button type="button" class="btn btn-sm btn-outline-warning example-q">What are the best practices for redacting sensitive information like credit card numbers before sending user input to an LLM?</button>
+            <button type="button" class="btn btn-sm btn-outline-warning example-q">How do I add documents in bulk to a vector store and what is the default batch size?</button>
+            <button type="button" class="btn btn-sm btn-outline-warning example-q">What similarity metric should I use for vector searches, and how do I set the minimum score threshold?</button>
+            <button type="button" class="btn btn-sm btn-outline-warning example-q">How can I build a conversational RAG system that remembers previous questions and lets users ask follow-up questions?</button>
+            <button type="button" class="btn btn-sm btn-outline-warning example-q">What Model Context Protocol features does ColdFusion support for connecting to external AI tools and services?</button>
+            <button type="button" class="btn btn-sm btn-outline-warning example-q">How do I implement passwordless authentication with biometrics or security keys instead of passwords?</button>
+            <button type="button" class="btn btn-sm btn-outline-warning example-q">Which AI model providers does ColdFusion 2025 support and can I use local inference for data privacy?</button>
+        </div>
+
+        <div id="pool-json" class="d-none d-flex flex-wrap gap-2 mt-2">
+            <button type="button" class="btn btn-sm btn-outline-info example-q">How do I check if a specific key exists in a structure before accessing it?</button>
+            <button type="button" class="btn btn-sm btn-outline-info example-q">What parameters can I pass when running a database query, and how do I use named parameters safely?</button>
+            <button type="button" class="btn btn-sm btn-outline-info example-q">What is the best encryption algorithm to use for sensitive data, and what key do I need to generate?</button>
+            <button type="button" class="btn btn-sm btn-outline-info example-q">How can I run code asynchronously and handle the result with a timeout?</button>
+            <button type="button" class="btn btn-sm btn-outline-info example-q">How do I store frequently accessed data in memory for a specific duration, and what happens when it expires?</button>
+            <button type="button" class="btn btn-sm btn-outline-info example-q">How can I add days or weeks to a date, and can I subtract time using negative numbers?</button>
+            <button type="button" class="btn btn-sm btn-outline-info example-q">What is the difference between adding multiple elements to an array at once versus one at a time?</button>
+            <button type="button" class="btn btn-sm btn-outline-info example-q">How do I create multiple threads that run independently, and how do I wait for them to finish before my page completes?</button>
+        </div>
+
+        <div id="pool-combined" class="d-none d-flex flex-wrap gap-2 mt-2">
+            <button type="button" class="btn btn-sm btn-outline-success example-q">How do I handle errors and exceptions in ColdFusion?</button>
+            <button type="button" class="btn btn-sm btn-outline-success example-q">What are the ways to secure user input and prevent injection attacks in ColdFusion?</button>
+            <button type="button" class="btn btn-sm btn-outline-success example-q">How do I work with JSON data — parsing it and converting ColdFusion objects back to JSON?</button>
+            <button type="button" class="btn btn-sm btn-outline-success example-q">What options do I have for caching data in ColdFusion to improve performance?</button>
+            <button type="button" class="btn btn-sm btn-outline-success example-q">How do I make HTTP requests to external APIs from ColdFusion?</button>
+            <button type="button" class="btn btn-sm btn-outline-success example-q">What are the available string manipulation functions for searching and replacing text?</button>
+            <button type="button" class="btn btn-sm btn-outline-success example-q">How does ColdFusion handle file uploads and what validation should I apply?</button>
+            <button type="button" class="btn btn-sm btn-outline-success example-q">How do I generate and verify secure password hashes in ColdFusion?</button>
+        </div>
+    </div>
 
     <div class="input-group mb-3">
         <input type="text"
@@ -359,6 +421,33 @@
         document.getElementById('sourceFilterField').value = val;
         document.getElementById('searchForm').submit();
     }
+
+    const pools    = ['pool-pdf', 'pool-json', 'pool-combined'];
+    let activePool = null;
+
+    function togglePool(id, btn) {
+        const isOpen = activePool === id;
+        pools.forEach(p => document.getElementById(p).classList.add('d-none'));
+        document.querySelectorAll('[onclick^="togglePool"]').forEach(b => b.classList.remove('active'));
+        if (!isOpen) {
+            document.getElementById(id).classList.remove('d-none');
+            btn.classList.add('active');
+            activePool = id;
+        } else {
+            activePool = null;
+        }
+    }
+
+    document.querySelectorAll('.example-q').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const field = document.getElementById('queryField');
+            field.value = btn.textContent.trim();
+            field.focus();
+            pools.forEach(p => document.getElementById(p).classList.add('d-none'));
+            document.querySelectorAll('[onclick^="togglePool"]').forEach(b => b.classList.remove('active'));
+            activePool = null;
+        });
+    });
 
     function submitDebug() {
         document.getElementById('debugQuery').value    = document.getElementById('queryField').value;

@@ -87,7 +87,11 @@
         <a id="btn-ingest" href="ingest.cfm?profile=#ACTIVE_PROFILE#"    class="btn btn-primary btn-lg px-4">&##128196; Ingest</a>
         <a id="btn-search" href="search.cfm?profile=#ACTIVE_PROFILE#"    class="btn btn-success btn-lg px-4">&##128269; Search</a>
         <a id="btn-debug"  href="debug_rag.cfm?profile=#ACTIVE_PROFILE#" class="btn btn-warning btn-lg px-4 text-dark">&##128300; Debug</a>
+        <button id="btn-test" onclick="testEndpoint()" class="btn btn-secondary btn-lg px-4">&##128268; Test</button>
     </div>
+
+    <!--- Test result panel --->
+    <div id="test-result" class="mt-4" style="display:none; max-width:540px; margin:0 auto;"></div>
 
     </cfoutput>
 
@@ -96,14 +100,56 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     const profileLabels = <cfoutput>#serializeJSON( profiles.reduce( function(acc,k,v){ acc[k]=v.label; return acc; }, {} ) )#</cfoutput>;
+    let activeProfile = '<cfoutput>#ACTIVE_PROFILE#</cfoutput>';
 
     function selectProfile(name) {
+        activeProfile = name;
+        document.cookie = 'cfai_profile=' + encodeURIComponent(name) + '; path=/; max-age=' + (365*24*60*60) + '; SameSite=Lax';
         document.querySelectorAll('.profile-card').forEach(c => c.classList.remove('selected'));
         event.currentTarget.classList.add('selected');
         document.getElementById('btn-ingest').href = 'ingest.cfm?profile='    + name;
         document.getElementById('btn-search').href = 'search.cfm?profile='    + name;
         document.getElementById('btn-debug').href  = 'debug_rag.cfm?profile=' + name;
         document.getElementById('activeLabel').textContent = profileLabels[name] || name;
+        document.getElementById('test-result').style.display = 'none';
+    }
+
+    function testEndpoint() {
+        const btn    = document.getElementById('btn-test');
+        const panel  = document.getElementById('test-result');
+        btn.disabled = true;
+        btn.textContent = '⏳ Testing…';
+        panel.style.display = 'none';
+
+        fetch('test_endpoint.cfm?profile=' + encodeURIComponent(activeProfile))
+            .then(r => r.json())
+            .then(d => {
+                const ollamaIcon = d.ollama.ok ? '✅' : '❌';
+                const storeIcon  = d.store.ok  ? '✅' : (d.store.vectorCount === 0 ? '⚠️' : '❌');
+                const overallCls = d.ok ? 'border-success' : (d.ollama.ok || d.store.ok ? 'border-warning' : 'border-danger');
+                const countBadge = d.store.vectorCount >= 0
+                    ? `<span class="badge bg-info text-dark ms-2">${d.store.vectorCount} vectors</span>` : '';
+
+                panel.innerHTML = `
+                    <div class="card bg-dark border ${overallCls} mt-3">
+                        <div class="card-body small">
+                            <h6 class="card-title text-secondary mb-3">Endpoint Test — ${d.label}</h6>
+                            <div class="mb-2">${ollamaIcon} <strong class="text-light">Ollama</strong>
+                                <span class="text-secondary ms-2">${d.ollama.message}</span></div>
+                            <div>${storeIcon} <strong class="text-light">Vector Store</strong>${countBadge}
+                                <span class="text-secondary ms-2">${d.store.message}</span></div>
+                        </div>
+                    </div>`;
+                panel.style.display = 'block';
+            })
+            .catch(err => {
+                panel.innerHTML = `<div class="alert alert-danger mt-3 small">Test failed: ${err}</div>`;
+                panel.style.display = 'block';
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = '&#128268; Test';
+            });
     }
 </script>
 

@@ -559,7 +559,7 @@
     <!--- ── PHASE 2: CFDocs JSON Ingestion ── --->
     <cfif doJSON>
 
-    <h4 class="mt-4 mb-3 text-info">&##128288; Phase 2 — CFDocs JSON Ingestion</h4>
+    <h4 class="mt-4 mb-3 text-info">&#128288; Phase 2 — CFDocs JSON Ingestion</h4>
     <cfflush>
 
     <cfscript>
