@@ -26,6 +26,8 @@
         "desktop_memory": {
             "label"            : "Desktop — InMemory",
             "endpoint"         : "Desktop",
+            "embedLocation"    : "Desktop",
+            "searchLocation"   : "Local (InMemory)",
             "ollamaBase"       : "http://YOUR_OLLAMA_HOST:11434",
             "embeddingModel"   : "nomic-embed-text",
             "embeddingDim"     : 768,
@@ -45,6 +47,8 @@
         "desktop_qdrant": {
             "label"            : "Desktop — Qdrant",
             "endpoint"         : "Desktop",
+            "embedLocation"    : "Desktop",
+            "searchLocation"   : "NAS (Qdrant)",
             "ollamaBase"       : "http://YOUR_OLLAMA_HOST:11434",
             "embeddingModel"   : "nomic-embed-text",
             "embeddingDim"     : 768,
@@ -64,6 +68,8 @@
         "nas_memory": {
             "label"            : "NAS — InMemory",
             "endpoint"         : "NAS",
+            "embedLocation"    : "NAS",
+            "searchLocation"   : "Local (InMemory)",
             "ollamaBase"       : "http://YOUR_OLLAMA_HOST:11434",
             "embeddingModel"   : "all-minilm",
             "embeddingDim"     : 384,
@@ -83,6 +89,8 @@
         "nas_qdrant": {
             "label"            : "NAS — Qdrant",
             "endpoint"         : "NAS",
+            "embedLocation"    : "NAS",
+            "searchLocation"   : "NAS (Qdrant)",
             "ollamaBase"       : "http://YOUR_OLLAMA_HOST:11434",
             "embeddingModel"   : "all-minilm",
             "embeddingDim"     : 384,

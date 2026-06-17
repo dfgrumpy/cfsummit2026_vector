@@ -410,7 +410,7 @@
     <!--- ── PHASE 1: PDF Ingestion ── --->
     <cfif doPDF>
 
-    <h4 class="mt-4 mb-3 text-info">&##128196; Phase 1 — PDF Ingestion</h4>
+    <h4 class="mt-4 mb-3 text-info">&#128196; Phase 1 — PDF Ingestion</h4>
 
     <cfif pdfFiles.recordCount EQ 0>
         <div class="alert alert-warning">

@@ -10,20 +10,17 @@
             <span class="text-secondary">Profile:</span>
             <span class="badge bg-success">#PROFILE_LABEL#</span>
 
-            <span class="text-secondary ms-1">Endpoint:</span>
-            <span class="badge bg-warning text-dark">#ENDPOINT_NAME#</span>
+            <span class="text-secondary ms-1">Embed on:</span>
+            <span class="badge bg-warning text-dark">#cfg.embedLocation#</span>
 
-            <span class="text-secondary ms-1">Embed:</span>
+            <span class="text-secondary ms-1">Model:</span>
             <span class="badge bg-info text-dark">#EMBEDDING_MODEL#</span>
 
-            <span class="text-secondary ms-1">LLM:</span>
-            <span class="badge bg-info text-dark">#LLM_MODEL#</span>
-
-            <span class="text-secondary ms-1">Store:</span>
+            <span class="text-secondary ms-1">Search on:</span>
             <cfif STORE_MODE EQ "qdrant">
-                <span class="badge bg-primary">Qdrant</span>
+                <span class="badge bg-primary">#cfg.searchLocation#</span>
             <cfelse>
-                <span class="badge bg-secondary">InMemory</span>
+                <span class="badge bg-secondary">#cfg.searchLocation#</span>
             </cfif>
         </div>
 
