@@ -13,6 +13,9 @@ It ingests PDF documents and CFDocs JSON files, converts them to vector embeddin
 
 The session demo showed this running against the ColdFusion documentation, but the pipeline works on any text-based content.
 
+**Note:**
+All the code in this repo and this readme was written by Claude.  This was done as both an experiment and an exercise in how good/bad AI-generated code can be.  While the code does work, there are a lot of issues with it so, as such, this code should only be used as an example. 
+
 ---
 
 ## How it works
